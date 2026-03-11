@@ -7,6 +7,10 @@
       "DOM",
       "DOM.Iterable"
     ],
+    "exclude": [
+      "**/*.test.ts",
+      "**/*.test.tsx"
+    ],
     "module": "ESNext",
     "skipLibCheck": true,
     "moduleResolution": "bundler",
@@ -28,10 +32,6 @@
   },
   "include": [
     "src"
-  ],
-  "exclude": [
-    "**/*.test.ts",
-    "**/*.test.tsx"
   ],
   "references": [
     {
