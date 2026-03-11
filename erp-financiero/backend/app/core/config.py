@@ -8,11 +8,11 @@ class Settings(BaseSettings):
         case_sensitive=False,
     )
 
-    # Database
-    DATABASE_URL: str
+    # Base de datos — Railway/Neon proveen DATABASE_URL automáticamente
+    DATABASE_URL: str = "postgresql://erp_user:erp_pass@localhost:5432/erp_db"
 
-    # Security
-    SECRET_KEY: str
+    # Seguridad — sobreescribir en producción con: openssl rand -hex 32
+    SECRET_KEY: str = "dev-secret-key-cambiar-en-produccion-usar-openssl-rand-hex-32"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
@@ -22,8 +22,13 @@ class Settings(BaseSettings):
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
 
-    # CORS
-    ALLOWED_ORIGINS: list[str] = ["http://localhost:3000"]
+    # CORS — incluye Vercel (frontend en producción) y localhost (desarrollo)
+    ALLOWED_ORIGINS: list[str] = [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "https://novaerp-cuck6c0ur-josecanihuantes-projects.vercel.app",
+        "https://*.vercel.app",
+    ]
 
 
 settings = Settings()

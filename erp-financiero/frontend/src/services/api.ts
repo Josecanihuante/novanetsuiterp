@@ -3,11 +3,15 @@ import { useAuthStore } from '@/store/authStore'
 
 /**
  * Instancia Axios centralizada.
+ * - En producción usa VITE_API_URL (apunta a Railway).
+ * - En desarrollo usa el proxy local de Vite (localhost:8000).
  * - Adjunta automáticamente el JWT en cada request.
  * - Detecta 401 → hace logout y redirige a /login.
  */
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
+
 const api = axios.create({
-  baseURL: '/api/v1',
+  baseURL: API_URL,
   headers: { 'Content-Type': 'application/json' },
   timeout: 30_000,
 })
