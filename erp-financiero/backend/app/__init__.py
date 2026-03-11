@@ -1,0 +1,1 @@
+"""ERP Financiero — Backend FastAPI."""
