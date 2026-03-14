@@ -1,0 +1,192 @@
+# ============================================================
+# ERP Financiero — Release Pipeline
+# Basado en googleapis/release-please-action (oficial)
+# Docs: https://github.com/googleapis/release-please-action
+#
+# Qué hace:
+#   1. Detecta commits con prefijos feat:/fix:/deps: en main
+#   2. Abre/actualiza automáticamente un "Release PR" con:
+#      - CHANGELOG.md actualizado
+#      - Bump de versión en package.json (frontend)
+#   3. Al mergear el Release PR:
+#      - Crea un tag git (ej: v1.2.0)
+#      - Crea un GitHub Release con las notas del CHANGELOG
+#      - Dispara el deploy automático a Render + Vercel
+# ============================================================
+
+name: Release — ERP Financiero
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write        # Para crear tags y releases
+  pull-requests: write   # Para crear y actualizar el Release PR
+
+jobs:
+
+  # ──────────────────────────────────────────────────────────
+  # JOB 1 — Release Please: gestiona el Release PR y el tag
+  # ──────────────────────────────────────────────────────────
+  release-please:
+    name: 🚀 Release Please
+    runs-on: ubuntu-latest
+
+    outputs:
+      # Estos outputs los usan los jobs de deploy más abajo
+      release_created:    ${{ steps.release.outputs.release_created }}
+      tag_name:           ${{ steps.release.outputs.tag_name }}
+      major:              ${{ steps.release.outputs.major }}
+      minor:              ${{ steps.release.outputs.minor }}
+      patch:              ${{ steps.release.outputs.patch }}
+      upload_url:         ${{ steps.release.outputs.upload_url }}
+
+    steps:
+      - name: 🤖 Ejecutar Release Please
+        uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          # Tipo de repositorio — "node" actualiza package.json automáticamente
+          # Cambiar a "python" si el repo principal es el backend
+          release-type: node
+
+          # Token con permisos para crear PRs y releases
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+          # Archivo de configuración (opcional — ver release-please-config.json abajo)
+          # config-file: release-please-config.json
+          # manifest-file: .release-please-manifest.json
+
+  # ──────────────────────────────────────────────────────────
+  # JOB 2 — Deploy a Render (backend) cuando se crea un release
+  # Solo se ejecuta si release-please creó un tag nuevo
+  # ──────────────────────────────────────────────────────────
+  deploy-backend:
+    name: 🐍 Deploy Backend → Render
+    runs-on: ubuntu-latest
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created }}
+
+    steps:
+      - name: ⬇️  Checkout código en el tag del release
+        uses: actions/checkout@v4
+
+      - name: 🚀 Trigger deploy en Render
+        run: |
+          echo "=== Desplegando versión ${{ needs.release-please.outputs.tag_name }} en Render ==="
+          
+          # Render permite disparar deploys via webhook/API
+          # Agregar RENDER_DEPLOY_HOOK_URL en los secrets del repo
+          if [ -n "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" ]; then
+            curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" \
+              -H "Content-Type: application/json" \
+              -d '{"clearCache": false}'
+            echo "✅ Deploy disparado en Render"
+          else
+            echo "⚠️  RENDER_DEPLOY_HOOK_URL no configurado en secrets"
+            echo "   Ir a Render → tu servicio → Settings → Deploy Hook → copiar URL"
+            echo "   Luego agregar como secret en GitHub: Settings → Secrets → RENDER_DEPLOY_HOOK_URL"
+          fi
+
+      - name: ⏳ Esperar que Render complete el deploy
+        run: |
+          echo "Esperando 60 segundos para que Render procese el deploy..."
+          sleep 60
+
+      - name: 🏥 Verificar que el backend responde
+        run: |
+          MAX_RETRIES=5
+          RETRY_DELAY=15
+          
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Intento $i/$MAX_RETRIES..."
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              https://erp-financiero-api.onrender.com/health || echo "000")
+            
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ Backend activo y respondiendo (HTTP 200)"
+              break
+            else
+              echo "⏳ Backend devuelve HTTP $STATUS — esperando ${RETRY_DELAY}s..."
+              sleep $RETRY_DELAY
+            fi
+            
+            if [ "$i" = "$MAX_RETRIES" ]; then
+              echo "❌ Backend no responde tras $MAX_RETRIES intentos"
+              exit 1
+            fi
+          done
+
+  # ──────────────────────────────────────────────────────────
+  # JOB 3 — Deploy a Vercel (frontend) cuando se crea un release
+  # ──────────────────────────────────────────────────────────
+  deploy-frontend:
+    name: ⚛️  Deploy Frontend → Vercel
+    runs-on: ubuntu-latest
+    needs: [release-please, deploy-backend]
+    if: ${{ needs.release-please.outputs.release_created }}
+
+    steps:
+      - name: ⬇️  Checkout código
+        uses: actions/checkout@v4
+
+      - name: 🟢 Configurar Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 📦 Instalar dependencias
+        working-directory: frontend
+        run: npm ci
+
+      - name: 🏗️  Build de producción
+        working-directory: frontend
+        run: npm run build
+        env:
+          VITE_API_URL: https://erp-financiero-api.onrender.com/api/v1
+
+      - name: 🚀 Deploy a Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token:   ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id:  ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: --prod
+          working-directory: frontend
+
+      - name: 🔗 Imprimir URL del deploy
+        run: |
+          echo "✅ Frontend desplegado en:"
+          echo "   https://novaerp-cuck6c0ur-josecanihuantes-projects.vercel.app"
+
+  # ──────────────────────────────────────────────────────────
+  # JOB 4 — Notificación del release completo
+  # ──────────────────────────────────────────────────────────
+  notify-release:
+    name: 📣 Notificación Release
+    runs-on: ubuntu-latest
+    needs: [release-please, deploy-backend, deploy-frontend]
+    if: ${{ needs.release-please.outputs.release_created }}
+
+    steps:
+      - name: 🎉 Resumen del release
+        run: |
+          echo "=================================================="
+          echo "  🎉 RELEASE COMPLETADO"
+          echo "=================================================="
+          echo ""
+          echo "  Versión:   ${{ needs.release-please.outputs.tag_name }}"
+          echo "  Major:     ${{ needs.release-please.outputs.major }}"
+          echo "  Minor:     ${{ needs.release-please.outputs.minor }}"
+          echo "  Patch:     ${{ needs.release-please.outputs.patch }}"
+          echo ""
+          echo "  Backend:   https://erp-financiero-api.onrender.com"
+          echo "  Frontend:  https://novaerp-cuck6c0ur-josecanihuantes-projects.vercel.app"
+          echo "  Releases:  https://github.com/${{ github.repository }}/releases"
+          echo ""
+          echo "  Backend deploy:  ${{ needs.deploy-backend.result }}"
+          echo "  Frontend deploy: ${{ needs.deploy-frontend.result }}"
+          echo "=================================================="
