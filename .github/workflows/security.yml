@@ -1,0 +1,442 @@
+# ============================================================
+# ERP Financiero — Security Pipeline
+# Escaneo de vulnerabilidades, secrets y código
+# Triggers: push/PR a main + schedule semanal (lunes 08:00 UTC)
+# ============================================================
+
+name: Security — ERP Financiero
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 8 * * 1"   # Cada lunes a las 08:00 UTC (05:00 Chile)
+  workflow_dispatch:        # Permite ejecutar manualmente desde GitHub
+
+env:
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "20"
+
+jobs:
+
+  # ──────────────────────────────────────────────────────────
+  # JOB 1 — Escaneo de secrets y credenciales expuestas
+  # ──────────────────────────────────────────────────────────
+  secrets-scan:
+    name: 🔑 Secrets & Credenciales
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ⬇️  Checkout código (historial completo)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # Necesario para escanear todo el historial de commits
+
+      - name: 🔍 Gitleaks — detectar secrets en el repo
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: false
+
+      - name: 🔍 Trufflehog — escanear historial de Git
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --only-verified
+        continue-on-error: true
+
+      - name: 📋 Verificar que .env no está en el repo
+        run: |
+          echo "=== Verificando archivos .env no commiteados ==="
+          if git ls-files | grep -E "^\.env$|^backend/\.env$|^frontend/\.env$"; then
+            echo "❌ ERROR: Archivo .env encontrado en el repositorio"
+            echo "   Agregar .env al .gitignore y removerlo del historial"
+            exit 1
+          else
+            echo "✅ No se encontraron archivos .env en el repositorio"
+          fi
+
+      - name: 📋 Verificar .gitignore cubre archivos sensibles
+        run: |
+          echo "=== Verificando .gitignore ==="
+          REQUIRED=(".env" "*.pem" "*.key" "*.p12" "__pycache__" "node_modules" ".venv" "venv")
+          MISSING=()
+          for pattern in "${REQUIRED[@]}"; do
+            if ! grep -qF "$pattern" .gitignore 2>/dev/null; then
+              MISSING+=("$pattern")
+            fi
+          done
+          if [ ${#MISSING[@]} -gt 0 ]; then
+            echo "⚠️  Patrones faltantes en .gitignore: ${MISSING[*]}"
+          else
+            echo "✅ .gitignore cubre todos los patrones sensibles"
+          fi
+
+  # ──────────────────────────────────────────────────────────
+  # JOB 2 — Vulnerabilidades en dependencias Python
+  # ──────────────────────────────────────────────────────────
+  python-deps:
+    name: 🐍 Dependencias Python
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ⬇️  Checkout código
+        uses: actions/checkout@v4
+
+      - name: 🐍 Configurar Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: 📦 Instalar herramientas de seguridad
+        run: pip install safety pip-audit bandit
+
+      - name: 🔍 Safety — CVEs en requirements.txt
+        working-directory: backend
+        run: |
+          echo "=== Safety Check ==="
+          safety check -r requirements.txt \
+            --output screen \
+            --full-report \
+            --ignore 70612 \
+            || true
+          # Falla el job solo si hay vulnerabilidades CRÍTICAS
+          safety check -r requirements.txt \
+            --output screen \
+            --severity critical
+        continue-on-error: false
+
+      - name: 🔍 pip-audit — auditoría alternativa de dependencias
+        working-directory: backend
+        run: |
+          echo "=== pip-audit ==="
+          pip-audit -r requirements.txt \
+            --desc on \
+            --format columns \
+            --skip-editable
+        continue-on-error: true
+
+      - name: 🔍 Bandit — análisis estático de seguridad del código Python
+        working-directory: backend
+        run: |
+          echo "=== Bandit SAST ==="
+          bandit -r app/ \
+            -ll \
+            -ii \
+            --skip B101,B601 \
+            -f json \
+            -o bandit-report.json || true
+          bandit -r app/ \
+            -ll \
+            -ii \
+            --skip B101,B601 \
+            -f screen
+        continue-on-error: false
+
+      - name: 📊 Subir reporte Bandit
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bandit-report
+          path: backend/bandit-report.json
+          retention-days: 30
+
+  # ──────────────────────────────────────────────────────────
+  # JOB 3 — Vulnerabilidades en dependencias npm (Frontend)
+  # ──────────────────────────────────────────────────────────
+  npm-deps:
+    name: ⚛️  Dependencias npm
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ⬇️  Checkout código
+        uses: actions/checkout@v4
+
+      - name: 🟢 Configurar Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 📦 Instalar dependencias
+        working-directory: frontend
+        run: npm ci
+
+      - name: 🔍 npm audit — vulnerabilidades conocidas
+        working-directory: frontend
+        run: |
+          echo "=== npm audit (críticas y altas) ==="
+          npm audit --audit-level=high --json > npm-audit.json || true
+          npm audit --audit-level=high
+        continue-on-error: false
+
+      - name: 🔍 Verificar dependencias desactualizadas
+        working-directory: frontend
+        run: |
+          echo "=== Dependencias desactualizadas ==="
+          npm outdated || true
+        continue-on-error: true
+
+      - name: 📊 Subir reporte npm audit
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: npm-audit-report
+          path: frontend/npm-audit.json
+          retention-days: 30
+
+  # ──────────────────────────────────────────────────────────
+  # JOB 4 — SAST: análisis estático del código fuente
+  # ──────────────────────────────────────────────────────────
+  sast:
+    name: 🔬 SAST — Análisis Estático
+    runs-on: ubuntu-latest
+
+    permissions:
+      actions: read
+      contents: read
+      security-events: write   # Necesario para subir resultados a GitHub Security
+
+    steps:
+      - name: ⬇️  Checkout código
+        uses: actions/checkout@v4
+
+      - name: 🔍 CodeQL — análisis semántico de seguridad
+        uses: github/codeql-action/init@v3
+        with:
+          languages: python, javascript
+          queries: security-and-quality
+
+      - name: 🏗️  Autobuild CodeQL
+        uses: github/codeql-action/autobuild@v3
+
+      - name: 📊 Ejecutar análisis CodeQL
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:python,javascript"
+
+      - name: 🔍 Semgrep — reglas de seguridad específicas para FastAPI + React
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/python
+            p/fastapi
+            p/jwt
+            p/sql-injection
+            p/react
+            p/typescript
+            p/owasp-top-ten
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+        continue-on-error: true
+
+  # ──────────────────────────────────────────────────────────
+  # JOB 5 — Seguridad de la API (OWASP checks)
+  # ──────────────────────────────────────────────────────────
+  api-security:
+    name: 🌐 Seguridad de la API
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: erp_user
+          POSTGRES_PASSWORD: erp_pass
+          POSTGRES_DB: erp_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://erp_user:erp_pass@localhost:5432/erp_test
+      SECRET_KEY: ci-only-secret-key-not-for-production-use
+      DEBUG: "false"
+
+    steps:
+      - name: ⬇️  Checkout código
+        uses: actions/checkout@v4
+
+      - name: 🐍 Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: 📦 Instalar dependencias
+        working-directory: backend
+        run: |
+          pip install -r requirements.txt
+          pip install httpx pytest
+
+      - name: 🗄️  Ejecutar migraciones
+        working-directory: backend
+        run: alembic upgrade head
+
+      - name: 🚀 Levantar API para pruebas
+        working-directory: backend
+        run: |
+          uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          sleep 8
+          curl -f http://localhost:8000/health || exit 1
+          echo "✅ API lista para pruebas de seguridad"
+
+      - name: 🔍 Verificar headers de seguridad HTTP
+        run: |
+          echo "=== Verificando headers de seguridad ==="
+          HEADERS=$(curl -sI http://localhost:8000/health)
+          echo "$HEADERS"
+          
+          # Verificar headers críticos
+          MISSING=""
+          
+          echo "$HEADERS" | grep -qi "x-content-type-options" || MISSING="$MISSING X-Content-Type-Options"
+          echo "$HEADERS" | grep -qi "x-frame-options" || MISSING="$MISSING X-Frame-Options"
+          
+          if [ -n "$MISSING" ]; then
+            echo "⚠️  Headers de seguridad faltantes:$MISSING"
+            echo "   Considerar agregar middleware de seguridad al FastAPI"
+          else
+            echo "✅ Headers de seguridad presentes"
+          fi
+        continue-on-error: true
+
+      - name: 🔍 Verificar que endpoints protegidos requieren JWT
+        run: |
+          echo "=== Verificando autenticación en endpoints protegidos ==="
+          
+          # Sin token — debe devolver 401 o 403
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            http://localhost:8000/api/v1/accounts)
+          
+          if [ "$STATUS" = "401" ] || [ "$STATUS" = "403" ]; then
+            echo "✅ Endpoint /accounts protegido correctamente (HTTP $STATUS)"
+          else
+            echo "❌ ERROR: /accounts devuelve HTTP $STATUS sin token — posible endpoint abierto"
+            exit 1
+          fi
+          
+          # Verificar que /health es público (no requiere auth)
+          STATUS_HEALTH=$(curl -s -o /dev/null -w "%{http_code}" \
+            http://localhost:8000/health)
+          if [ "$STATUS_HEALTH" = "200" ]; then
+            echo "✅ /health es público correctamente"
+          fi
+
+      - name: 🔍 Verificar que no se aceptan tokens inválidos
+        run: |
+          echo "=== Verificando rechazo de tokens falsos ==="
+          
+          FAKE_TOKEN="eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJoYWNrZXJAZXZpbC5jb20ifQ.fake_signature"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer $FAKE_TOKEN" \
+            http://localhost:8000/api/v1/accounts)
+          
+          if [ "$STATUS" = "401" ] || [ "$STATUS" = "403" ]; then
+            echo "✅ Token inválido rechazado correctamente (HTTP $STATUS)"
+          else
+            echo "❌ ERROR: Token inválido NO fue rechazado (HTTP $STATUS)"
+            exit 1
+          fi
+
+      - name: 🔍 Verificar CORS — origen no autorizado debe ser bloqueado
+        run: |
+          echo "=== Verificando CORS ==="
+          
+          RESPONSE=$(curl -s -I \
+            -H "Origin: https://evil-hacker-site.com" \
+            -H "Access-Control-Request-Method: GET" \
+            http://localhost:8000/api/v1/accounts)
+          
+          echo "$RESPONSE"
+          
+          if echo "$RESPONSE" | grep -qi "access-control-allow-origin: https://evil-hacker-site.com"; then
+            echo "❌ ERROR: CORS permite origen no autorizado"
+            exit 1
+          else
+            echo "✅ CORS bloquea orígenes no autorizados"
+          fi
+
+      - name: 🔍 Verificar rate limiting básico (brute force)
+        run: |
+          echo "=== Simulando intentos de login fallidos ==="
+          
+          BLOCKED=false
+          for i in {1..20}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              -X POST http://localhost:8000/api/v1/auth/login \
+              -H "Content-Type: application/json" \
+              -d '{"email":"hacker@evil.com","password":"wrong_password"}')
+            
+            if [ "$STATUS" = "429" ]; then
+              echo "✅ Rate limiting activo tras $i intentos (HTTP 429)"
+              BLOCKED=true
+              break
+            fi
+          done
+          
+          if [ "$BLOCKED" = "false" ]; then
+            echo "⚠️  Rate limiting no detectado — considerar implementar slowapi"
+          fi
+        continue-on-error: true
+
+  # ──────────────────────────────────────────────────────────
+  # JOB 6 — Reporte consolidado de seguridad
+  # ──────────────────────────────────────────────────────────
+  security-report:
+    name: 📋 Reporte de Seguridad
+    runs-on: ubuntu-latest
+    needs: [secrets-scan, python-deps, npm-deps, sast, api-security]
+    if: always()
+
+    steps:
+      - name: 📊 Resumen consolidado
+        run: |
+          echo "=============================================="
+          echo "  ERP Financiero — Reporte de Seguridad"
+          echo "  Fecha: $(date -u '+%Y-%m-%d %H:%M UTC')"
+          echo "=============================================="
+          echo ""
+          echo "  🔑 Secrets scan:        ${{ needs.secrets-scan.result }}"
+          echo "  🐍 Python deps (CVE):   ${{ needs.python-deps.result }}"
+          echo "  ⚛️  npm deps (CVE):      ${{ needs.npm-deps.result }}"
+          echo "  🔬 SAST (CodeQL):       ${{ needs.sast.result }}"
+          echo "  🌐 API security:        ${{ needs.api-security.result }}"
+          echo ""
+          echo "=============================================="
+          
+          # Fallar si algún job crítico falló
+          if [[ "${{ needs.secrets-scan.result }}"  == "failure" || \
+                "${{ needs.python-deps.result }}"    == "failure" || \
+                "${{ needs.api-security.result }}"   == "failure" ]]; then
+            echo "❌ SEGURIDAD FALLIDA — revisar los jobs marcados arriba"
+            exit 1
+          else
+            echo "✅ Pipeline de seguridad completado"
+          fi
+
+      - name: 📥 Descargar todos los reportes
+        uses: actions/download-artifact@v4
+        with:
+          path: security-reports/
+        continue-on-error: true
+
+      - name: 📤 Subir reporte consolidado
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-report-${{ github.run_number }}
+          path: security-reports/
+          retention-days: 90
