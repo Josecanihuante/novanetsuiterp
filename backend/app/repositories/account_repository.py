@@ -4,8 +4,8 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from app.models.account import Account, Period
-from app.schemas.account import AccountCreate, AccountUpdate, PeriodCreate, PeriodUpdate
+from app.models.accounting import Account, Period
+from app.schemas.accounting import AccountCreate, AccountUpdate, PeriodCreate, PeriodUpdate
 
 
 class AccountRepository:
