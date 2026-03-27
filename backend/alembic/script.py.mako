@@ -1,4 +1,3 @@
-${message}
 <%
     import re
     import datetime

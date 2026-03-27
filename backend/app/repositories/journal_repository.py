@@ -5,8 +5,8 @@ from typing import Optional
 
 from sqlalchemy.orm import Session, joinedload
 
-from app.models.journal import JournalEntry, JournalLine
-from app.schemas.journal import JournalEntryCreate, JournalEntryUpdate
+from app.models.accounting import JournalEntry, JournalLine
+from app.schemas.accounting import JournalEntryCreate, JournalEntryUpdate
 
 
 class JournalRepository:

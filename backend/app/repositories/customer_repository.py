@@ -4,8 +4,8 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from app.models.customer import Customer, Vendor
-from app.schemas.customer import CustomerCreate, CustomerUpdate, VendorCreate, VendorUpdate
+from app.models.commerce import Customer, Vendor
+from app.schemas.commerce import CustomerCreate, CustomerUpdate, VendorCreate, VendorUpdate
 
 
 class CustomerRepository:

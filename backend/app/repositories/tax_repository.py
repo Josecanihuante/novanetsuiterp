@@ -4,8 +4,8 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from app.models.tax import PpmPayment, TaxConfig, TaxResult
-from app.schemas.tax import (
+from app.models.taxes import PpmPayment, TaxConfig, TaxResult
+from app.schemas.taxes import (
     PpmPaymentCreate,
     PpmPaymentUpdate,
     TaxConfigCreate,

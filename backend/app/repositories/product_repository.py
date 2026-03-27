@@ -5,8 +5,8 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from app.models.product import Product, StockMovement
-from app.schemas.product import ProductCreate, ProductUpdate, StockMovementCreate
+from app.models.inventory import Product, StockMovement
+from app.schemas.inventory import ProductCreate, ProductUpdate, StockMovementCreate
 
 
 class ProductRepository:
