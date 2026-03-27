@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '@/services/api';
 import { useAuthStore } from '@/store/authStore';
-import { Button, Input, Card, CardHeader, CardContent, CardFooter } from '@/components/ui';
-
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Card } from '@/components/ui/Card';
 export const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,56 +31,52 @@ export const LoginPage = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <Card className="w-full max-w-md">
-        <CardHeader className="pb-6">
-          <h2 className="text-xl font-bold text-center">Iniciar Sesión</h2>
-          <p className="text-center text-muted-foreground">
+      <Card
+        className="w-full max-w-md"
+        footer={
+          <div className="text-center text-sm text-gray-500 w-full">
+            <p>
+              ¿Olvidó su contraseña? <a href="#" className="font-medium text-primary">Restablecerla</a>
+            </p>
+          </div>
+        }
+      >
+        <div className="pb-6">
+          <h2 className="text-xl font-bold text-center text-gray-800">Iniciar Sesión</h2>
+          <p className="text-center text-gray-500 mt-1">
             Ingrese sus credenciales para acceder al sistema
           </p>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="email" className="mb-2 block text-sm font-medium">
-                Correo electrónico
-              </label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-                required
-                disabled={loading}
-              />
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input
+            id="email"
+            type="email"
+            label="Correo electrónico"
+            value={email}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+            required
+            disabled={loading}
+          />
+          
+          <Input
+            id="password"
+            type="password"
+            label="Contraseña"
+            value={password}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+            required
+            disabled={loading}
+          />
+          {error && (
+            <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+              <p className="text-sm text-red-700">{error}</p>
             </div>
-            <div>
-              <label htmlFor="password" className="mb-2 block text-sm font-medium">
-                Contraseña
-              </label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-                required
-                disabled={loading}
-              />
-            </div>
-            {error && (
-              <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
-                <p className="text-sm text-red-700">{error}</p>
-              </div>
-            )}
-            <Button type="submit" variant="primary" disabled={loading} className="w-full">
-              {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
-            </Button>
-          </form>
-        </CardContent>
-        <CardFooter className="pt-4 text-center text-sm text-muted-foreground">
-          <p>
-            ¿Olvidó su contraseña? <a href="#" className="font-medium">Restablecerla</a>
-          </p>
-        </CardFooter>
+          )}
+          <Button type="submit" variant="primary" disabled={loading} className="w-full mt-2">
+            {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+          </Button>
+        </form>
       </Card>
     </div>
   );

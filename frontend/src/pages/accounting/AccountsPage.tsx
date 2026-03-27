@@ -119,10 +119,10 @@ export default function AccountsPage() {
 
   const { data, isLoading, error } = useAccounts()
 
-  const accounts: AccountRow[] = (data?.data ?? []).map((a) => ({
+  const accounts = (data?.data ?? []).map((a) => ({
     ...a,
     account_type: ACCOUNT_TYPE_LABELS[a.account_type] ?? a.account_type,
-  }))
+  })) as AccountRow[]
 
   return (
     <div className="space-y-5">
