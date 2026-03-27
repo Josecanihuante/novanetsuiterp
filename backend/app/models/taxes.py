@@ -86,6 +86,7 @@ class TaxResult(Base):
     ppm_paid: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False, default=Decimal("0.00"))
     calculated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     is_filed: Mapped[bool] = mapped_column(default=False, nullable=False)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

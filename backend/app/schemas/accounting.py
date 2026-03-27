@@ -68,6 +68,35 @@ from typing import Optional
 from pydantic import BaseModel, Field, model_validator
 
 
+# ── Account ───────────────────────────────────────────────────────────────────
+
+class AccountBase(BaseModel):
+    code: str = Field(..., max_length=20)
+    name: str = Field(..., max_length=255)
+    account_type: str = Field(..., pattern=r"^(asset|liability|equity|revenue|expense)$")
+    parent_id: Optional[str] = None
+    description: Optional[str] = None
+
+
+class AccountCreate(AccountBase):
+    pass
+
+
+class AccountUpdate(BaseModel):
+    name: Optional[str] = Field(None, max_length=255)
+    account_type: Optional[str] = Field(None, pattern=r"^(asset|liability|equity|revenue|expense)$")
+    parent_id: Optional[str] = None
+    description: Optional[str] = None
+
+
+class AccountResponse(AccountBase):
+    id: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 # ── JournalLine ───────────────────────────────────────────────────────────────
 
 class JournalLineBase(BaseModel):
