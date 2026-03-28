@@ -27,6 +27,7 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://localhost:5173",
         "https://novaerp-cuck6c0ur-josecanihuantes-projects.vercel.app",
+        "https://novanetsuiterp3.vercel.app",
         "https://*.vercel.app",
     ]
 

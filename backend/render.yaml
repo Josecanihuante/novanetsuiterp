@@ -13,7 +13,6 @@ services:
         sync: false
       - key: DEBUG
         value: "false"
-      - key: ALLOWED_ORIGINS
-        value: "https://novaerp-cuck6c0ur-josecanihuantes-projects.vercel.app"
+
     autoDeploy: true
     plan: free
