@@ -38,26 +38,25 @@ app = FastAPI(
 )
 
 
-# ── CORS (compatible con Vercel) ──────────────────────────────────────────────
-ALLOWED_ORIGINS = settings.ALLOWED_ORIGINS or ["*"]
+# ── CORS (compatible con Vercel previews + producción) ────────────────────────
+def is_origin_allowed(origin: str) -> bool:
+    allowed = list(settings.ALLOWED_ORIGINS or [])
+    # Siempre permitir localhost
+    if origin.startswith("http://localhost") or origin.startswith("http://127.0.0.1"):
+        return True
+    # Permitir cualquier subdominio de Vercel del proyecto
+    if origin.endswith(".vercel.app"):
+        return True
+    # Verificar lista explícita
+    return origin in allowed
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=r"https://.*\.vercel\.app|http://localhost:\d+|http://127\.0\.0\.1:\d+",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-# ── Middleware request-id (útil para trazabilidad) ─────────────────────────────
-@app.middleware("http")
-async def add_request_id(request: Request, call_next):
-    request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
-    response = await call_next(request)
-    response.headers["X-Request-ID"] = request_id
-    return response
-
 
 # ── Exception handlers ────────────────────────────────────────────────────────
 @app.exception_handler(Exception)
