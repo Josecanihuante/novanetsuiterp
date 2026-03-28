@@ -31,7 +31,8 @@ export default function Login() {
       const form = new FormData()
       form.append('username', data.email)
       form.append('password', data.password)
-      const res = await fetch('/api/v1/auth/login', { method: 'POST', body: form })
+      const baseUrl = import.meta.env.VITE_API_URL || '/api/v1'
+      const res = await fetch(`${baseUrl}/auth/login`, { method: 'POST', body: form })
       if (res.status === 401) throw new Error('Credenciales incorrectas')
       if (!res.ok) throw new Error('Error al iniciar sesión')
       const { data: body } = await res.json()
