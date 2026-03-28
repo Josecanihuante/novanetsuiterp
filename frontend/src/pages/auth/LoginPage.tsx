@@ -17,13 +17,27 @@ export const LoginPage = () => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
     try {
-      const response = await api.post('/auth/login', { email, password });
-      const { token, refreshToken, user } = response.data;
-      setAuth(token, refreshToken, user);
+      // OAuth2PasswordRequestForm requiere form-urlencoded con campo "username"
+      const formData = new URLSearchParams();
+      formData.append('username', email);
+      formData.append('password', password);
+
+      const response = await api.post('/auth/login', formData, {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      });
+
+      // El backend devuelve {success, data: {access_token, refresh_token, user}}
+      const { access_token, refresh_token, user } = response.data.data;
+      setAuth(access_token, refresh_token, user);
       navigate('/dashboard');
+
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Credenciales incorrectas');
+      const detail = err.response?.data?.error?.message
+        || err.response?.data?.detail
+        || 'Error al iniciar sesión';
+      setError(detail);
     } finally {
       setLoading(false);
     }
@@ -58,7 +72,7 @@ export const LoginPage = () => {
             required
             disabled={loading}
           />
-          
+
           <Input
             id="password"
             type="password"
