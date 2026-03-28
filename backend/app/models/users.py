@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-
+from sqlalchemy import CheckConstraint
 from sqlalchemy import UUID, Boolean, DateTime, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
