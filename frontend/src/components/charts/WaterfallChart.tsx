@@ -40,30 +40,11 @@ export function WaterfallChart({
   height = 320,
   formatValue = defaultFormat,
 }: WaterfallChartProps) {
-  // Construcción de barras flotantes usando rango [bottom, top]
-  let running = 0
+  // Construcción de barras con ajuste a la base
   const chartData = items.map((item) => {
-    let bottom: number
-    let top: number
-    
-    if (item.type === 'subtotal') {
-      bottom = 0
-      top = item.value
-      running = item.value
-    } else if (item.type === 'income') {
-      bottom = running
-      top = running + item.value
-      running += item.value
-    } else {
-      // deducción — el rango es desde el remanente (bottom) hasta el running anterior (top)
-      bottom = running - item.value
-      top = running
-      running -= item.value
-    }
-
     return {
       name: item.name,
-      range: [bottom, top],
+      range: [0, item.value],
       type: item.type,
       fill: TYPE_COLOR[item.type],
       rawValue: item.type === 'deduction' ? -item.value : item.value,

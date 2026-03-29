@@ -27,7 +27,8 @@ const MOCK_ASIENTOS: AsientoRow[] = [
 
 const CUENTAS = [
   // Balance General - Activos
-  '1100 - Efectivo y equivalentes (Caja/Banco)',
+  '1100 - Caja',
+  '1110 - Banco',
   '1200 - Cuentas por cobrar',
   '1300 - Inventarios',
   '1500 - Activos Fijos Netos',
