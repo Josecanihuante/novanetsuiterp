@@ -37,8 +37,8 @@ def login(
     if not user.is_active:
         _error("USER_INACTIVE", "Usuario inactivo.", status.HTTP_403_FORBIDDEN)
 
-    access_token  = create_access_token({"sub": user.id, "role": user.role})
-    refresh_token = create_refresh_token({"sub": user.id})
+    access_token  = create_access_token({"sub": str(user.id), "role": user.role})
+    refresh_token = create_refresh_token({"sub": str(user.id)})
 
     return {
         "success": True,
