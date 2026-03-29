@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { X, Download } from 'lucide-react'
 import { KPICard } from '@/components/ui/KPICard'
 import { Card } from '@/components/ui/Card'
@@ -149,7 +150,30 @@ function MetricaDrawer({ metrica, onClose }: { metrica: Metrica | null; onClose:
 
 // ── Página principal BSC ─────────────────────────────────────────────────────
 export default function BSC() {
-  const [activeTab, setActiveTab]       = useState(TABS[0])
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  const pathToTab: Record<string, string> = {
+    'rentabilidad': 'Rentabilidad',
+    'liquidez': 'Liquidez',
+    'endeudamiento': 'Endeudamiento',
+    'eficiencia': 'Eficiencia',
+    'ciclo-efectivo': 'Ciclo Efectivo',
+    'estrategico': 'Estratégico',
+  }
+
+  const tabToPath: Record<string, string> = {
+    'Rentabilidad': 'rentabilidad',
+    'Liquidez': 'liquidez',
+    'Endeudamiento': 'endeudamiento',
+    'Eficiencia': 'eficiencia',
+    'Ciclo Efectivo': 'ciclo-efectivo',
+    'Estratégico': 'estrategico',
+  }
+
+  const currentPath = location.pathname.split('/').pop() || 'rentabilidad'
+  const activeTab = pathToTab[currentPath] || 'Rentabilidad'
+
   const [selectedMetric, setSelectedMetric] = useState<Metrica | null>(null)
 
   const metricas = PERSPECTIVAS[activeTab] ?? []
@@ -191,7 +215,7 @@ export default function BSC() {
           {TABS.map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => navigate(`/bsc/${tabToPath[tab]}`)}
               className={[
                 'whitespace-nowrap px-4 py-2.5 text-sm font-medium border-b-2 transition-colors',
                 activeTab === tab

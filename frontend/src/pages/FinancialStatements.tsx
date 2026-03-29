@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Download } from 'lucide-react'
 import { FinancialTable } from '@/components/ui/FinancialTable'
 import { Card } from '@/components/ui/Card'
@@ -90,7 +91,20 @@ const PERIODOS = [
 const TABS = ['Estado de Resultados', 'Balance General', 'EFE', 'EOAF']
 
 export default function FinancialStatements() {
-  const [tab, setTab]   = useState(0)
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  const pathToIndex: Record<string, number> = {
+    'estado-resultados': 0,
+    'balance-general': 1,
+    'efe': 2,
+    'eoaf': 3
+  }
+  const indexToPath = ['estado-resultados', 'balance-general', 'efe', 'eoaf']
+
+  const currentPath = location.pathname.split('/').pop() || 'estado-resultados'
+  const tab = pathToIndex[currentPath] ?? 0
+
   const [period, setPeriod] = useState(PERIODOS[0].value)
   const [compare, setCompare]= useState('')
 
@@ -149,7 +163,7 @@ export default function FinancialStatements() {
           {TABS.map((t, i) => (
             <button
               key={t}
-              onClick={() => setTab(i)}
+              onClick={() => navigate(`/financiero/${indexToPath[i]}`)}
               className={[
                 'whitespace-nowrap px-4 py-2.5 text-sm font-medium border-b-2 transition-colors',
                 tab === i

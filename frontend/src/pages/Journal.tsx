@@ -25,7 +25,29 @@ const MOCK_ASIENTOS: AsientoRow[] = [
   { id: '4', entry_number: 'NS-DOC-456', entry_date: '2025-02-12', description: 'Imp. NetSuite — Doc: 456', source: 'NetSuite', status: 'posted', debit: 3_400_000, credit: 3_400_000 },
 ]
 
-const CUENTAS = ['1100 - Caja', '1200 - Banco', '2100 - CxP Proveedores', '4000 - Ingresos Ventas', '5000 - Costo Ventas', '6100 - Gastos Operativos']
+const CUENTAS = [
+  // Balance General - Activos
+  '1100 - Efectivo y equivalentes (Caja/Banco)',
+  '1200 - Cuentas por cobrar',
+  '1300 - Inventarios',
+  '1500 - Activos Fijos Netos',
+  '1700 - Intangibles',
+  // Balance General - Pasivos
+  '2100 - Cuentas por pagar (Proveedores)',
+  '2200 - Deuda CP',
+  '2500 - Deuda LP',
+  // Balance General - Patrimonio
+  '3100 - Capital',
+  '3200 - Utilidades Retenidas',
+  // Estado de Resultados - Ingresos
+  '4100 - Ingresos Ventas',
+  // Estado de Resultados - Costos y Gastos
+  '5100 - Costo de Ventas',
+  '6100 - Gastos Operativos',
+  '6200 - Depreciación',
+  '6300 - Gastos Financieros',
+  '6400 - Impuesto Renta',
+]
 
 const COLS: Column<AsientoRow>[] = [
   { key: 'entry_number', header: 'N° Asiento', type: 'text', sortable: true },

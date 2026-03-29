@@ -40,28 +40,33 @@ export function WaterfallChart({
   height = 320,
   formatValue = defaultFormat,
 }: WaterfallChartProps) {
-  // Construcción de barras flotantes (base + valor)
+  // Construcción de barras flotantes usando rango [bottom, top]
   let running = 0
   const chartData = items.map((item) => {
-    let base: number
+    let bottom: number
+    let top: number
+    
     if (item.type === 'subtotal') {
-      base = 0
+      bottom = 0
+      top = item.value
+      running = item.value
     } else if (item.type === 'income') {
-      base = running
+      bottom = running
+      top = running + item.value
       running += item.value
     } else {
-      // deducción — valor positivo significa resta
-      base = running - Math.abs(item.value)
-      running -= Math.abs(item.value)
+      // deducción — el rango es desde el remanente (bottom) hasta el running anterior (top)
+      bottom = running - item.value
+      top = running
+      running -= item.value
     }
 
     return {
       name: item.name,
-      base,
-      amount: Math.abs(item.type === 'subtotal' ? running : item.value),
+      range: [bottom, top],
       type: item.type,
       fill: TYPE_COLOR[item.type],
-      rawValue: item.type === 'subtotal' ? running : item.value,
+      rawValue: item.type === 'deduction' ? -item.value : item.value,
     }
   })
 
@@ -88,16 +93,14 @@ export function WaterfallChart({
             width={90}
           />
           <Tooltip
-            formatter={(v: number, _: string, props: { payload?: { rawValue?: number } }) =>
-              [formatValue(props.payload?.rawValue ?? v), 'Monto']
+            formatter={(v: number | [number, number], _: string, props: { payload?: { rawValue?: number } }) =>
+              [formatValue(props.payload?.rawValue ?? (Array.isArray(v) ? (v[1] - v[0]) : v)), 'Monto']
             }
             contentStyle={{ fontSize: 12, borderRadius: 6, border: '1px solid #e5e7eb' }}
             cursor={{ fill: 'rgba(0,0,0,0.03)' }}
           />
-          {/* Barra transparente de base (invisible, solo eleva) */}
-          <Bar dataKey="base" stackId="wf" fill="transparent" />
-          {/* Barra de valor con color */}
-          <Bar dataKey="amount" stackId="wf" radius={[3, 3, 0, 0]}>
+          {/* Barra flotante de rango */}
+          <Bar dataKey="range" radius={[3, 3, 0, 0]}>
             {chartData.map((entry, index) => (
               <Cell key={index} fill={entry.fill} />
             ))}

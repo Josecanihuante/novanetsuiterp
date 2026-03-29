@@ -31,9 +31,23 @@ function defaultFormatY(v: number): string {
 }
 
 function formatXTick(value: string): string {
+  if (typeof value === 'string' && /^\d{4}-\d{2}$/.test(value)) {
+    const [year, month] = value.split('-');
+    const date = new Date(Number(year), Number(month) - 1, 1);
+    return format(date, 'MMM', { locale: es }).toUpperCase();
+  }
   const date = new Date(value)
   if (!isNaN(date.getTime())) {
     return format(date, 'MMM', { locale: es }).toUpperCase()
+  }
+  return value
+}
+
+function formatTooltipLabel(value: string): string {
+  if (typeof value === 'string' && /^\d{4}-\d{2}$/.test(value)) {
+    const [year, month] = value.split('-');
+    const date = new Date(Number(year), Number(month) - 1, 1);
+    return format(date, 'MMMM yyyy', { locale: es }).replace(/^\w/, c => c.toUpperCase());
   }
   return value
 }
@@ -64,6 +78,7 @@ export function LineChartWrapper({
           width={80}
         />
         <Tooltip
+          labelFormatter={formatTooltipLabel}
           formatter={(value: number, name: string) => [formatY(value), name]}
           contentStyle={{
             fontSize: 12,
