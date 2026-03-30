@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { Plus, X, Check } from 'lucide-react'
-import api from '@/services/api'
 import { DataTable, Column } from '@/components/ui/DataTable'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -61,26 +60,20 @@ const COLS: Column<AsientoRow>[] = [
 ]
 
 // ── Modal nuevo asiento ───────────────────────────────────────────────────────
-function NuevoAsientoModal({ onClose }: { onClose: () => void }) {
+function NuevoAsientoModal({ onClose, onSave }: { onClose: () => void, onSave: (r: AsientoRow) => void }) {
   const [fecha, setFecha]     = useState(new Date().toISOString().slice(0, 10))
   const [glosa, setGlosa]     = useState('')
+  const [periodo, setPeriodo] = useState('02 / 2025')
   const [lines, setLines]     = useState<AsientoLine[]>([
     { account: '', debit: 0, credit: 0, description: '' },
     { account: '', debit: 0, credit: 0, description: '' },
   ])
-  const [accounts, setAccounts] = useState<any[]>([])
-  const [periods, setPeriods] = useState<any[]>([])
-  const [periodId, setPeriodId] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  useEffect(() => {
-    api.get('/accounts?size=1000').then(res => setAccounts(res.data.data)).catch(console.error)
-    api.get('/periods').then(res => {
-      setPeriods(res.data.data)
-      const active = res.data.data.find((p: any) => !p.is_closed)
-      if (active) setPeriodId(active.id)
-    }).catch(console.error)
-  }, [])
+  const PERIODOS = [
+    '01 / 2025', '02 / 2025', '03 / 2025', '04 / 2025',
+    '05 / 2025', '06 / 2025', '07 / 2025', '08 / 2025',
+    '09 / 2025', '10 / 2025', '11 / 2025', '12 / 2025',
+  ]
 
   const totalDebit  = lines.reduce((s, l) => s + (l.debit || 0), 0)
   const totalCredit = lines.reduce((s, l) => s + (l.credit || 0), 0)
@@ -95,46 +88,28 @@ function NuevoAsientoModal({ onClose }: { onClose: () => void }) {
 
   const fmt = (n: number) => new Intl.NumberFormat('es-CL').format(n)
 
-  const handleSubmit = async (status: 'draft' | 'posted') => {
+  const handleSubmit = (status: 'draft' | 'posted') => {
     if (!balanced) return
-    if (!periodId) { alert("Debe seleccionar un período."); return }
-    setIsSubmitting(true)
-
-    try {
-      const payloadLines = lines.map((l, i) => {
-        const accStr = l.account
-        const match = accounts.find(a => `${a.code} - ${a.name}` === accStr)
-        if (!match) throw new Error(`Línea ${i + 1}: Cuenta "${accStr}" no es válida.`)
-        if (!l.debit && !l.credit) throw new Error(`Línea ${i + 1}: Inválida debito/credito de cero en ambos.`)
-        return {
-          account_id: match.id,
-          debit: l.debit || 0,
-          credit: l.credit || 0,
-          description: l.description || glosa,
-          line_order: i + 1
-        }
-      }).filter(l => l.debit > 0 || l.credit > 0) // Remover vacías si ocurrieron
-
-      if (payloadLines.length < 2) throw new Error("Se requieren al menos 2 líneas para un asiento de partida doble.")
-
-      const payload = {
-        period_id: periodId,
-        entry_number: `A-${Date.now().toString().slice(-6)}`,
-        entry_date: new Date(fecha).toISOString(),
-        description: glosa,
-        status: status,
-        lines: payloadLines
-      }
-
-      await api.post('/journal/entries', payload)
-      onClose()
-      window.location.reload()
-    } catch (err: any) {
-      alert(err.message || "Error guardando el asiento.")
-      console.error(err)
-    } finally {
-      setIsSubmitting(false)
+    
+    if (lines.some(l => l.account === '')) {
+      alert("Por favor selecciona una cuenta para todas las líneas.")
+      return
     }
+
+    const asientoNuevo: AsientoRow = {
+      id: Math.random().toString(),
+      entry_number: `A-${Date.now().toString().slice(-4)}`,
+      entry_date: fecha,
+      description: glosa || 'Sin descripción',
+      source: 'Manual',
+      status: status,
+      periodo: periodo,
+      debit: totalDebit,
+      credit: totalCredit
+    }
+    
+    onSave(asientoNuevo)
+    onClose()
   }
 
   return (
@@ -149,10 +124,10 @@ function NuevoAsientoModal({ onClose }: { onClose: () => void }) {
           {/* Encabezado */}
           <div className="grid grid-cols-3 gap-4">
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700">Período</label>
-              <select value={periodId} onChange={e => setPeriodId(e.target.value)} className="h-9 border border-gray-300 rounded-md px-3 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/40">
-                <option value="">Seleccione...</option>
-                {periods.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              <label htmlFor="asiento-periodo" className="text-sm font-medium text-gray-700">Período</label>
+              <select id="asiento-periodo" value={periodo} onChange={(e) => setPeriodo(e.target.value)}
+                className="h-9 border border-gray-300 rounded-md px-3 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/40">
+                {PERIODOS.map(p => <option key={p} value={p}>{p}</option>)}
               </select>
             </div>
             <div className="flex flex-col gap-1">
@@ -189,7 +164,7 @@ function NuevoAsientoModal({ onClose }: { onClose: () => void }) {
                         <input list={`cuentas-list-${i}`} value={line.account} onChange={(e) => updateLine(i, 'account', e.target.value)}
                           placeholder="Buscar cuenta..."
                           className="w-full h-8 border border-gray-200 rounded px-2 text-xs focus:outline-none focus:ring-1 focus:ring-secondary/40" />
-                        <datalist id={`cuentas-list-${i}`}>{accounts.map((a) => <option key={a.id} value={`${a.code} - ${a.name}`} />)}</datalist>
+                        <datalist id={`cuentas-list-${i}`}>{CUENTAS.map((c) => <option key={c} value={c} />)}</datalist>
                       </td>
                       <td className="px-2 py-1.5 w-28">
                         <input type="number" min={0} value={line.debit || ''} onChange={(e) => updateLine(i, 'debit', parseFloat(e.target.value) || 0)}
@@ -239,8 +214,8 @@ function NuevoAsientoModal({ onClose }: { onClose: () => void }) {
         {/* Footer */}
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button variant="secondary" type="button" isDisabled={isSubmitting} onClick={() => handleSubmit('draft')}>Guardar borrador</Button>
-          <Button variant="primary" type="button" isDisabled={!balanced || isSubmitting} onClick={() => handleSubmit('posted')}>
+          <Button variant="secondary" type="button" onClick={() => handleSubmit('draft')}>Guardar borrador</Button>
+          <Button variant="primary" type="button" isDisabled={!balanced} onClick={() => handleSubmit('posted')}>
             {balanced ? 'Contabilizar' : 'Contabilizar (cuadra primero)'}
           </Button>
         </div>
@@ -252,7 +227,7 @@ function NuevoAsientoModal({ onClose }: { onClose: () => void }) {
 // ── Página Journal ─────────────────────────────────────────────────────────-
 export default function Journal() {
   const [showModal, setShowModal] = useState(false)
-  const [data] = useState<AsientoRow[]>(MOCK_ASIENTOS)
+  const [data, setData] = useState<AsientoRow[]>(MOCK_ASIENTOS)
 
   const tableData = data.map((a) => ({ ...a, status: a.status as unknown as string })) as unknown as AsientoRow[]
 
@@ -280,7 +255,7 @@ export default function Journal() {
         onRowClick={(row) => console.log('asiento', row)}
       />
 
-      {showModal && <NuevoAsientoModal onClose={() => setShowModal(false)} />}
+      {showModal && <NuevoAsientoModal onClose={() => setShowModal(false)} onSave={(asiento) => setData([asiento, ...data])} />}
     </div>
   )
 }
