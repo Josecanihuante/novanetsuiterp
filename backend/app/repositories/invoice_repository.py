@@ -59,6 +59,7 @@ class InvoiceRepository:
             period_id=data.period_id,
             issue_date=data.issue_date,
             due_date=data.due_date,
+            payment_condition=data.payment_condition,
             currency=data.currency,
             notes=data.notes,
         )
@@ -86,9 +87,14 @@ class InvoiceRepository:
             subtotal += item_subtotal
             tax_amount += item_tax
 
-        invoice.subtotal = subtotal.quantize(Decimal("0.01"))
-        invoice.tax_amount = tax_amount.quantize(Decimal("0.01"))
-        invoice.total = (subtotal + tax_amount).quantize(Decimal("0.01"))
+        if data.currency == "CLP":
+            # Forzamos cálculos redondos sin decimales para CLP
+            subtotal = round(subtotal)
+            tax_amount = round(subtotal * Decimal("0.19"))
+            
+        invoice.subtotal = subtotal.quantize(Decimal("1")) if data.currency == "CLP" else subtotal.quantize(Decimal("0.01"))
+        invoice.tax_amount = tax_amount.quantize(Decimal("1")) if data.currency == "CLP" else tax_amount.quantize(Decimal("0.01"))
+        invoice.total = (invoice.subtotal + invoice.tax_amount)
 
         self.db.commit()
         self.db.refresh(invoice)

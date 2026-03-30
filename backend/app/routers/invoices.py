@@ -23,12 +23,13 @@ def _rbac_write(user: User):
 
 
 def _invoice_dict(inv) -> dict:
-    return {
+    data = {
         "id": inv.id, "invoice_number": inv.invoice_number,
         "invoice_type": inv.invoice_type, "status": inv.status,
         "customer_id": inv.customer_id, "vendor_id": inv.vendor_id,
         "issue_date": inv.issue_date.isoformat(),
         "due_date": inv.due_date.isoformat(),
+        "payment_condition": getattr(inv, "payment_condition", "30 días"),
         "currency": inv.currency,
         "subtotal": float(inv.subtotal),
         "tax_amount": float(inv.tax_amount),
@@ -36,6 +37,22 @@ def _invoice_dict(inv) -> dict:
         "paid_amount": float(inv.paid_amount),
         "notes": inv.notes,
     }
+    
+    if getattr(inv, "customer", None):
+        c = inv.customer
+        data["customer"] = {
+            "id": str(c.id), "name": c.name, "tax_id": str(c.tax_id),
+            "trade_name": str(c.trade_name) if c.trade_name else None,
+            "email": c.email, "phone": c.phone, "address": c.address, 
+            "city": c.city, "country": c.country,
+            "credit_limit": float(c.credit_limit),
+            "payment_terms_days": c.payment_terms_days,
+            "is_active": c.is_active,
+            "created_at": c.created_at.isoformat(),
+            "updated_at": c.updated_at.isoformat()
+        }
+        
+    return data
 
 
 @router.get("", response_model=dict, summary="Listar facturas")

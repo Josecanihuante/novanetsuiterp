@@ -35,6 +35,7 @@ def _cust_dict(c) -> dict:
 
 @router.get("", response_model=dict, summary="Listar clientes")
 def list_customers(
+    search: Optional[str] = Query(None),
     is_active: Optional[bool] = Query(None),
     page: int = Query(1, ge=1),
     size: int = Query(50, ge=1, le=200),
@@ -42,7 +43,7 @@ def list_customers(
     current_user: User = Depends(get_current_user),
 ):
     repo = CustomerRepository(db)
-    customers = repo.list(skip=(page - 1) * size, limit=size, is_active=is_active)
+    customers = repo.list(skip=(page - 1) * size, limit=size, is_active=is_active, search=search)
     return {
         "success": True,
         "data": [_cust_dict(c) for c in customers],

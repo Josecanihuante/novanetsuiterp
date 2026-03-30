@@ -123,6 +123,7 @@ class InvoiceBase(BaseModel):
     period_id: str
     issue_date: datetime
     due_date: datetime
+    payment_condition: str = Field(default="30 días", max_length=50)
     currency: str = Field(default="CLP", max_length=3)
     notes: Optional[str] = None
 
@@ -133,7 +134,6 @@ class InvoiceBase(BaseModel):
         if self.invoice_type == "purchase" and not self.vendor_id:
             raise ValueError("Las facturas de compra requieren vendor_id.")
         return self
-
 
 class InvoiceCreate(InvoiceBase):
     items: list[InvoiceItemCreate] = Field(..., min_length=1)
@@ -157,6 +157,7 @@ class InvoiceResponse(InvoiceBase):
     created_at: datetime
     updated_at: datetime
     items: list[InvoiceItemResponse] = []
+    customer: Optional[CustomerResponse] = None
 
     model_config = {"from_attributes": True}
 

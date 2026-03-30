@@ -163,8 +163,9 @@ function NuevaFacturaModal({ onClose }: { onClose: () => void }) {
   )
 }
 
+import { Link } from 'react-router-dom'
+
 export default function Invoices() {
-  const [showModal, setShowModal]   = useState(false)
   const [tipoFilter, setTipoFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
 
@@ -180,9 +181,11 @@ export default function Invoices() {
           <h1 className="text-xl font-bold text-gray-900">Facturación</h1>
           <p className="text-sm text-gray-500 mt-0.5">Facturas de venta, compra, NC y ND</p>
         </div>
-        <Button id="invoices-nueva-factura" variant="primary" onClick={() => setShowModal(true)}>
-          <Plus size={14} /> Nueva factura
-        </Button>
+        <Link to="/commerce/invoices/nueva">
+          <Button id="invoices-nueva-factura" variant="primary">
+            <Plus size={14} /> Nueva factura
+          </Button>
+        </Link>
       </div>
 
       {/* Filtros */}
@@ -200,7 +203,6 @@ export default function Invoices() {
       </div>
 
       <DataTable columns={COLS} data={filtered} onRowClick={(r) => console.log(r)} />
-      {showModal && <NuevaFacturaModal onClose={() => setShowModal(false)} />}
     </div>
   )
 }

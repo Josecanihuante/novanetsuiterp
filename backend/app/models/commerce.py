@@ -92,6 +92,7 @@ class Invoice(Base):
     issue_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     due_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     currency: Mapped[uuid.UUID] = mapped_column(String(3), nullable=False, default="CLP")
+    payment_condition: Mapped[str] = mapped_column(String(50), nullable=False, default="30 días", server_default="30 días")
     subtotal: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False, default=Decimal("0.00"))
     tax_amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False, default=Decimal("0.00"))
     total: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False, default=Decimal("0.00"))

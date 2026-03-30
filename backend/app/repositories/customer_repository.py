@@ -22,10 +22,12 @@ class CustomerRepository:
             Customer.tax_id == tax_id, Customer.deleted_at.is_(None)
         ).first()
 
-    def list(self, skip: int = 0, limit: int = 50, is_active: Optional[bool] = None) -> list[Customer]:
+    def list(self, skip: int = 0, limit: int = 50, is_active: Optional[bool] = None, search: Optional[str] = None) -> list[Customer]:
         q = self.db.query(Customer).filter(Customer.deleted_at.is_(None))
         if is_active is not None:
             q = q.filter(Customer.is_active == is_active)
+        if search:
+            q = q.filter(Customer.name.ilike(f"%{search}%") | Customer.tax_id.ilike(f"%{search}%"))
         return q.order_by(Customer.name).offset(skip).limit(limit).all()
 
     def create(self, data: CustomerCreate) -> Customer:

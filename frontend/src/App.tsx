@@ -21,6 +21,7 @@ import Customers           from '@/pages/Customers'
 import Inventory           from '@/pages/Inventory'
 import Import              from '@/pages/Import'
 import PPM                 from '@/pages/PPM'
+import NuevaFacturaPage    from '@/pages/commerce/NuevaFacturaPage'
 
 // ── Guard de rutas privadas ───────────────────────────────────────────────────
 function PrivateLayout() {
@@ -52,6 +53,7 @@ export default function App() {
           <Route path="financiero/*"  element={<FinancialStatements />} />
           <Route path="contabilidad"  element={<Journal />} />
           <Route path="facturas"      element={<Invoices />} />
+          <Route path="commerce/invoices/nueva" element={<NuevaFacturaPage />} />
           <Route path="clientes"      element={<Customers />} />
           <Route path="inventario"    element={<Inventory />} />
           <Route path="importar"      element={<Import />} />
