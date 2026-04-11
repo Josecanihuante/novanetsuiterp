@@ -1,8 +1,10 @@
 import React, { useState } from 'react'
-import { Plus, X } from 'lucide-react'
+import { Plus, X, FileCheck } from 'lucide-react'
 import { DataTable, Column } from '@/components/ui/DataTable'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { useAuthStore } from '@/store/authStore'
+import api from '@/services/api'
 
 interface InvoiceRow {
   id: string
@@ -13,21 +15,41 @@ interface InvoiceRow {
   party: string
   total: number
   status: string
+  dte_estado?: string   // estado DTE si existe
   [key: string]: unknown
 }
 
 const MOCK: InvoiceRow[] = [
-  { id: '1', invoice_number: 'F-001', type: 'Venta',   issue_date: '2025-02-01', due_date: '2025-03-01', party: 'Empresa ABC',    total: 5_950_000, status: 'issued' },
-  { id: '2', invoice_number: 'F-002', type: 'Compra',  issue_date: '2025-02-05', due_date: '2025-03-05', party: 'Proveedor XYZ', total: 1_428_000, status: 'paid' },
+  { id: '1', invoice_number: 'F-001', type: 'Venta',   issue_date: '2025-02-01', due_date: '2025-03-01', party: 'Empresa ABC',    total: 5_950_000, status: 'issued', dte_estado: 'ACEPTADO' },
+  { id: '2', invoice_number: 'F-002', type: 'Compra',  issue_date: '2025-02-05', due_date: '2025-03-05', party: 'Proveedor XYZ', total: 1_428_000, status: 'paid',   dte_estado: 'ENVIADO' },
   { id: '3', invoice_number: 'NC-01', type: 'NC',      issue_date: '2025-02-10', due_date: '2025-03-10', party: 'Empresa DEF',    total: -595_000, status: 'issued' },
-  { id: '4', invoice_number: 'F-003', type: 'Venta',   issue_date: '2025-02-15', due_date: '2025-03-15', party: 'Cliente GHI',   total: 3_570_000, status: 'draft' },
+  { id: '4', invoice_number: 'F-003', type: 'Venta',   issue_date: '2025-02-15', due_date: '2025-03-15', party: 'Cliente GHI',   total: 3_570_000, status: 'draft',  dte_estado: 'PENDIENTE' },
 ]
+
+// ── Badge de estado DTE ──────────────────────────────────────────────────────
+const DTE_COLORS: Record<string, string> = {
+  PENDIENTE:          'bg-yellow-100 text-yellow-800',
+  ENVIADO:            'bg-blue-100 text-blue-800',
+  ACEPTADO:           'bg-green-100 text-green-800',
+  ACEPTADO_REPAROS:   'bg-orange-100 text-orange-800',
+  RECHAZADO:          'bg-red-100 text-red-800',
+  ANULADO:            'bg-gray-100 text-gray-500',
+}
+
+function DteBadge({ estado }: { estado?: string }) {
+  if (!estado) return <span className="text-xs text-gray-400">Sin DTE</span>
+  return (
+    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${DTE_COLORS[estado] ?? 'bg-gray-100 text-gray-700'}`}>
+      {estado}
+    </span>
+  )
+}
 
 const STATUS_BADGE = (v: unknown): 'success' | 'danger' | 'warning' | 'neutral' => {
   const s = String(v)
-  if (s === 'paid')   return 'success'
-  if (s === 'issued') return 'neutral'
-  if (s === 'draft')  return 'warning'
+  if (s === 'paid')      return 'success'
+  if (s === 'issued')    return 'neutral'
+  if (s === 'draft')     return 'warning'
   if (s === 'cancelled') return 'danger'
   return 'neutral'
 }
@@ -40,6 +62,12 @@ const COLS: Column<InvoiceRow>[] = [
   { key: 'party',          header: 'Contraparte',type: 'text' },
   { key: 'total',          header: 'Total',      type: 'currency',sortable: true },
   { key: 'status',         header: 'Estado',     type: 'badge',   badgeMap: STATUS_BADGE },
+  {
+    key: 'dte_estado',
+    header: 'DTE',
+    type: 'custom',
+    render: (row) => <DteBadge estado={row.dte_estado as string | undefined} />,
+  },
 ]
 
 // ── Modal nueva factura ──────────────────────────────────────────────────────

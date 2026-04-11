@@ -31,5 +31,13 @@ class Settings(BaseSettings):
         "https://*.vercel.app",
     ]
 
+    # SII / DTE — cambiar en Render cuando se obtenga certificado
+    SII_AMBIENTE: str            = "CERTIFICACION"         # CERTIFICACION | PRODUCCION
+    SII_RUT_EMPRESA: str         = "76987654-3"            # sin puntos, con guión
+    SII_CERT_PATH: str           = ""                      # /app/certs/cert.p12
+    SII_CERT_PASSWORD: str       = ""                      # contraseña del .p12
+    SII_RESOLUCION_NUMERO: str   = "0"                     # número de resolución SII
+    SII_RESOLUCION_FECHA: str    = "2024-01-01"            # fecha de la resolución
+
 
 settings = Settings()

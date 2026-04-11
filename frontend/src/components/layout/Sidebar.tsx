@@ -13,7 +13,9 @@ import {
   Settings,
   ChevronDown,
   ChevronRight,
+  Building2,
 } from 'lucide-react'
+import { useAuthStore } from '@/store/authStore'
 
 interface NavItem {
   label: string
@@ -101,6 +103,8 @@ function NavGroup({ item }: { item: NavItem }) {
 }
 
 export function Sidebar() {
+  const role = useAuthStore((s) => s.user?.role)
+
   return (
     <aside
       className="flex flex-col bg-primary text-white shrink-0"
@@ -134,6 +138,21 @@ export function Sidebar() {
                 </NavLink>
               </li>
             ),
+          )}
+
+          {/* Ítem exclusivo admin: SII / DTE */}
+          {role === 'admin' && (
+            <li>
+              <NavLink
+                to="/sii/configuracion"
+                className={({ isActive }) =>
+                  `${BASE} ${isActive ? ACTIVE_CLASS : IDLE_CLASS}`
+                }
+              >
+                <Building2 size={18} />
+                SII / DTE
+              </NavLink>
+            </li>
           )}
         </ul>
       </nav>

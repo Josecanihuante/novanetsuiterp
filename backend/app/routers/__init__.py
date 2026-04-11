@@ -12,6 +12,7 @@ from app.routers import (
     invoices,
     journal,
     periods,
+    sii,
     taxes,
     users,
     vendors,
@@ -32,3 +33,4 @@ api_router.include_router(customers.router)
 api_router.include_router(vendors.router)
 api_router.include_router(inventory.router)
 api_router.include_router(taxes.router)
+api_router.include_router(sii.router)
