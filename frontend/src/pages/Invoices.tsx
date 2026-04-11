@@ -15,15 +15,16 @@ interface InvoiceRow {
   party: string
   total: number
   status: string
-  dte_estado?: string   // estado DTE si existe
+  dte_estado?: string       // estado DTE si existe
+  journal_entry_id?: string // asiento contable si fue contabilizada
   [key: string]: unknown
 }
 
 const MOCK: InvoiceRow[] = [
-  { id: '1', invoice_number: 'F-001', type: 'Venta',   issue_date: '2025-02-01', due_date: '2025-03-01', party: 'Empresa ABC',    total: 5_950_000, status: 'issued', dte_estado: 'ACEPTADO' },
-  { id: '2', invoice_number: 'F-002', type: 'Compra',  issue_date: '2025-02-05', due_date: '2025-03-05', party: 'Proveedor XYZ', total: 1_428_000, status: 'paid',   dte_estado: 'ENVIADO' },
-  { id: '3', invoice_number: 'NC-01', type: 'NC',      issue_date: '2025-02-10', due_date: '2025-03-10', party: 'Empresa DEF',    total: -595_000, status: 'issued' },
-  { id: '4', invoice_number: 'F-003', type: 'Venta',   issue_date: '2025-02-15', due_date: '2025-03-15', party: 'Cliente GHI',   total: 3_570_000, status: 'draft',  dte_estado: 'PENDIENTE' },
+  { id: '1', invoice_number: 'F-001', type: 'Venta',  issue_date: '2025-02-01', due_date: '2025-03-01', party: 'Empresa ABC',    total: 5_950_000, status: 'issued', dte_estado: 'ACEPTADO',  journal_entry_id: 'je-001' },
+  { id: '2', invoice_number: 'F-002', type: 'Compra', issue_date: '2025-02-05', due_date: '2025-03-05', party: 'Proveedor XYZ', total: 1_428_000, status: 'paid',   dte_estado: 'ENVIADO',   journal_entry_id: 'je-002' },
+  { id: '3', invoice_number: 'NC-01', type: 'NC',     issue_date: '2025-02-10', due_date: '2025-03-10', party: 'Empresa DEF',   total:  -595_000, status: 'issued' },
+  { id: '4', invoice_number: 'F-003', type: 'Venta',  issue_date: '2025-02-15', due_date: '2025-03-15', party: 'Cliente GHI',   total: 3_570_000, status: 'draft',  dte_estado: 'PENDIENTE' },
 ]
 
 // ── Badge de estado DTE ──────────────────────────────────────────────────────
@@ -42,6 +43,16 @@ function DteBadge({ estado }: { estado?: string }) {
     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${DTE_COLORS[estado] ?? 'bg-gray-100 text-gray-700'}`}>
       {estado}
     </span>
+  )
+}
+
+// ── Badge de asiento contable ────────────────────────────────────────────────
+function AsientoBadge({ journalEntryId }: { journalEntryId?: string }) {
+  if (!journalEntryId) return (
+    <span className="text-xs text-yellow-600 font-medium">⚠ Sin asiento</span>
+  )
+  return (
+    <span className="text-xs text-green-600 font-medium">✓ Contabilizada</span>
   )
 }
 
@@ -67,6 +78,12 @@ const COLS: Column<InvoiceRow>[] = [
     header: 'DTE',
     type: 'custom' as const,
     render: (row: InvoiceRow) => <DteBadge estado={row.dte_estado} />,
+  },
+  {
+    key: 'journal_entry_id',
+    header: 'Asiento',
+    type: 'custom' as const,
+    render: (row: InvoiceRow) => <AsientoBadge journalEntryId={row.journal_entry_id} />,
   },
 ]
 

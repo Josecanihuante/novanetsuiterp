@@ -3,6 +3,7 @@ from fastapi import APIRouter
 
 from app.routers import (
     accounts,
+    accounting_engine_router,
     auth,
     bsc,
     customers,
@@ -34,3 +35,4 @@ api_router.include_router(vendors.router)
 api_router.include_router(inventory.router)
 api_router.include_router(taxes.router)
 api_router.include_router(sii.router)
+api_router.include_router(accounting_engine_router.router)

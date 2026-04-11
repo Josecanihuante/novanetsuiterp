@@ -48,7 +48,14 @@ const NAV: NavItem[] = [
       { label: 'Orig. y Aplic. Fondos', href: '/financiero/eoaf' },
     ],
   },
-  { label: 'Contabilidad',         icon: <BookOpen size={18} />,   href: '/contabilidad' },
+  {
+    label: 'Contabilidad',
+    icon: <BookOpen size={18} />,
+    children: [
+      { label: 'Libro Diario',         href: '/contabilidad' },
+      { label: 'Registro de Compras',  href: '/accounting/registro-compras' },
+    ],
+  },
   { label: 'Facturación',          icon: <Receipt size={18} />,    href: '/facturas' },
   { label: 'Clientes',             icon: <Users size={18} />,      href: '/clientes' },
   { label: 'Inventario',           icon: <Package size={18} />,    href: '/inventario' },
