@@ -5,7 +5,7 @@ import { es } from 'date-fns/locale'
 import { Badge } from './Badge'
 import { SkeletonTable } from './Skeleton'
 
-type ColumnType = 'text' | 'number' | 'currency' | 'percent' | 'date' | 'badge'
+type ColumnType = 'text' | 'number' | 'currency' | 'percent' | 'date' | 'badge' | 'custom'
 
 export interface Column<T> {
   key: keyof T
@@ -13,6 +13,7 @@ export interface Column<T> {
   type: ColumnType
   sortable?: boolean
   badgeMap?: (value: unknown) => 'success' | 'danger' | 'warning' | 'neutral'
+  render?: (row: T) => React.ReactNode
 }
 
 interface DataTableProps<T extends Record<string, unknown>> {
@@ -193,7 +194,9 @@ export function DataTable<T extends Record<string, unknown>>({
                     const val = row[col.key]
                     return (
                       <td role="gridcell" key={String(col.key)} className="px-4 py-3 text-gray-700">
-                        {col.type === 'badge' && col.badgeMap ? (
+                        {col.type === 'custom' && col.render ? (
+                          col.render(row)
+                        ) : col.type === 'badge' && col.badgeMap ? (
                           <Badge variant={col.badgeMap(val)}>
                             {String(val ?? '')}
                           </Badge>

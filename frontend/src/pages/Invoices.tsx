@@ -65,8 +65,8 @@ const COLS: Column<InvoiceRow>[] = [
   {
     key: 'dte_estado',
     header: 'DTE',
-    type: 'custom',
-    render: (row) => <DteBadge estado={row.dte_estado as string | undefined} />,
+    type: 'custom' as const,
+    render: (row: InvoiceRow) => <DteBadge estado={row.dte_estado} />,
   },
 ]
 
