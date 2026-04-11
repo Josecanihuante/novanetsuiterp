@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
   BarChart3,
@@ -61,11 +61,19 @@ const IDLE_CLASS   = 'text-white/70 hover:bg-white/10 hover:text-white'
 
 function NavGroup({ item }: { item: NavItem }) {
   const [open, setOpen] = useState(false)
+  const navigate = useNavigate()
+
+  const handleGroupClick = () => {
+    if (!open && item.children && item.children.length > 0) {
+      navigate(item.children[0].href)
+    }
+    setOpen((o) => !o)
+  }
 
   return (
     <li>
       <button
-        onClick={() => setOpen((o) => !o)}
+        onClick={handleGroupClick}
         className={`${BASE} w-full text-left ${IDLE_CLASS}`}
       >
         {item.icon}
