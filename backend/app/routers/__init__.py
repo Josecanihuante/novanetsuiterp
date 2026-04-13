@@ -1,5 +1,6 @@
 """Paquete de la API v1."""
 from fastapi import APIRouter
+from app.routers import user_management
 
 from app.routers import (
     accounts,
