@@ -1,5 +1,5 @@
 """Repositorio CRUD para User."""
-from typing import Optional
+from typing import Optional, List
 
 from sqlalchemy.orm import Session
 
@@ -22,7 +22,7 @@ class UserRepository:
             User.email == email, User.deleted_at.is_(None)
         ).first()
 
-    def list(self, skip: int = 0, limit: int = 50) -> list[User]:
+    def list(self, skip: int = 0, limit: int = 50) -> List[User]:
         return (
             self.db.query(User)
             .filter(User.deleted_at.is_(None))
@@ -66,7 +66,7 @@ class UserRepository:
         include_inactive: bool = False,
         skip: int = 0,
         limit: int = 50,
-    ) -> list[User]:
+    ) -> List[User]:
         """Lista usuarios de una empresa específica. Solo contador y viewer."""
         q = (
             self.db.query(User)
