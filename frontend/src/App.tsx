@@ -24,6 +24,7 @@ import PPM                 from '@/pages/PPM'
 import NuevaFacturaPage    from '@/pages/commerce/NuevaFacturaPage'
 import SIIConfigPage       from '@/pages/sii/SIIConfigPage'
 import RegistroComprasPage from '@/pages/accounting/RegistroComprasPage'
+import UserManagementPage  from '@/pages/admin/UserManagementPage'
 
 // ── Guard de rutas privadas ───────────────────────────────────────────────────
 function PrivateLayout() {
@@ -63,6 +64,7 @@ export default function App() {
           <Route path="configuracion" element={<Dashboard />} />
           <Route path="sii/configuracion" element={<SIIConfigPage />} />
           <Route path="accounting/registro-compras" element={<RegistroComprasPage />} />
+          <Route path="admin/usuarios" element={<UserManagementPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

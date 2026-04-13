@@ -14,6 +14,7 @@ import {
   ChevronDown,
   ChevronRight,
   Building2,
+  UserCog,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 
@@ -158,6 +159,21 @@ export function Sidebar() {
               >
                 <Building2 size={18} />
                 SII / DTE
+              </NavLink>
+            </li>
+          )}
+
+          {/* Ítem exclusivo admin/superadmin: Gestión de Usuarios */}
+          {(role === 'admin' || role === 'superadmin') && (
+            <li>
+              <NavLink
+                to="/admin/usuarios"
+                className={({ isActive }) =>
+                  `${BASE} ${isActive ? ACTIVE_CLASS : IDLE_CLASS}`
+                }
+              >
+                <UserCog size={18} />
+                Usuarios
               </NavLink>
             </li>
           )}

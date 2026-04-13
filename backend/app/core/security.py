@@ -71,6 +71,29 @@ def verify_token(token: str) -> dict:
         raise credentials_exception
 
 
+# ── Jerarquía de roles ────────────────────────────────────────────────────────
+ROLE_HIERARCHY = {
+    'superadmin': 4,
+    'admin':      3,
+    'contador':   2,
+    'viewer':     1,
+}
+
+
+def can_manage_role(manager_role: str, target_role: str) -> bool:
+    """
+    Define qué roles puede gestionar cada manager:
+    - superadmin: puede gestionar admin, contador, viewer
+    - admin:      puede gestionar solo contador y viewer (NUNCA admin ni superadmin)
+    - contador/viewer: no pueden gestionar a nadie
+    """
+    if manager_role == 'superadmin':
+        return target_role in ('admin', 'contador', 'viewer')
+    if manager_role == 'admin':
+        return target_role in ('contador', 'viewer')
+    return False
+
+
 def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
@@ -78,8 +101,9 @@ def get_current_user(
     """
     Dependency de FastAPI. Decodifica el token, busca el usuario en BD
     y lo retorna. Lanza 401 si el token es inválido o el usuario no existe.
+    Registra el último acceso (last_login) en cada autenticación exitosa.
     """
-    from app.models.user import User  # import diferido para evitar circular
+    from app.models.users import User  # CORREGIDO: users (plural), import diferido
 
     payload = verify_token(token)
     user_id: Optional[str] = payload.get("sub")
@@ -102,5 +126,12 @@ def get_current_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={"code": "USER_INACTIVE", "message": "Usuario inactivo"},
         )
+
+    # Registrar último acceso
+    try:
+        user.last_login = datetime.now(timezone.utc)
+        db.commit()
+    except Exception:
+        db.rollback()
 
     return user
