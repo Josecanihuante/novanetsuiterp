@@ -20,7 +20,7 @@ interface PasswordModalProps {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const ROLES_GESTIONABLES = [
   { value: 'contador', label: 'Contador' },
-  { value: 'viewer',   label: 'Observador' },
+  { value: 'viewer', label: 'Observador' },
 ]
 
 const API_BASE = `${import.meta.env.VITE_API_URL ?? ''}/api/v1/user-management`
@@ -28,11 +28,11 @@ const API_BASE = `${import.meta.env.VITE_API_URL ?? ''}/api/v1/user-management`
 function formatDate(iso: string | null): string {
   if (!iso) return 'Nunca'
   const d = new Date(iso)
-  const dd   = String(d.getDate()).padStart(2, '0')
-  const mm   = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
   const yyyy = d.getFullYear()
-  const hh   = String(d.getHours()).padStart(2, '0')
-  const min  = String(d.getMinutes()).padStart(2, '0')
+  const hh = String(d.getHours()).padStart(2, '0')
+  const min = String(d.getMinutes()).padStart(2, '0')
   return `${dd}/${mm}/${yyyy} ${hh}:${min}`
 }
 
@@ -142,10 +142,10 @@ interface UserFormModalProps {
 }
 
 function UserFormModal({ mode, initial, onClose, onSave, saving, error }: UserFormModalProps) {
-  const [email,     setEmail]     = useState(initial?.email ?? '')
-  const [fullName,  setFullName]  = useState(initial?.full_name ?? '')
-  const [role,      setRole]      = useState(initial?.role ?? 'viewer')
-  const [password,  setPassword]  = useState('')
+  const [email, setEmail] = useState(initial?.email ?? '')
+  const [fullName, setFullName] = useState(initial?.full_name ?? '')
+  const [role, setRole] = useState<"contador" | "viewer" | "">("")
+  const [password, setPassword] = useState('')
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -219,7 +219,7 @@ function UserFormModal({ mode, initial, onClose, onSave, saving, error }: UserFo
               id="um-role"
               required
               value={role}
-              onChange={(e) => setRole(e.target.value)}
+              onChange={(e) => setRole(e.target.value as "contador" | "viewer")}
               style={inputStyle}
             >
               {ROLES_GESTIONABLES.map((r) => (
@@ -298,15 +298,15 @@ function UserFormModal({ mode, initial, onClose, onSave, saving, error }: UserFo
 export default function UserManagementPage() {
   const token = useAuthStore((s) => s.token)
 
-  const [users,          setUsers]          = useState<UserRow[]>([])
-  const [loading,        setLoading]        = useState(true)
-  const [showInactive,   setShowInactive]   = useState(false)
-  const [formMode,       setFormMode]       = useState<'create' | 'edit' | null>(null)
-  const [editingUser,    setEditingUser]    = useState<UserRow | undefined>(undefined)
-  const [saving,         setSaving]         = useState(false)
-  const [formError,      setFormError]      = useState('')
-  const [tempPassword,   setTempPassword]   = useState<string | null>(null)
-  const [actionError,    setActionError]    = useState('')
+  const [users, setUsers] = useState<UserRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [showInactive, setShowInactive] = useState(false)
+  const [formMode, setFormMode] = useState<'create' | 'edit' | null>(null)
+  const [editingUser, setEditingUser] = useState<UserRow | undefined>(undefined)
+  const [saving, setSaving] = useState(false)
+  const [formError, setFormError] = useState('')
+  const [tempPassword, setTempPassword] = useState<string | null>(null)
+  const [actionError, setActionError] = useState('')
 
   const authHeaders = { Authorization: `Bearer ${token}` }
 
