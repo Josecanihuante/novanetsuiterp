@@ -144,7 +144,7 @@ interface UserFormModalProps {
 function UserFormModal({ mode, initial, onClose, onSave, saving, error }: UserFormModalProps) {
   const [email, setEmail] = useState(initial?.email ?? '')
   const [fullName, setFullName] = useState(initial?.full_name ?? '')
-  const [role, setRole] = useState<"contador" | "viewer" | "">("")
+  const [role, setRole] = useState(initial?.role ?? 'viewer')
   const [password, setPassword] = useState('')
 
   const handleSubmit = (e: React.FormEvent) => {
