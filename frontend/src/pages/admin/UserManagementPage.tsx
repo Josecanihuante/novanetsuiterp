@@ -23,7 +23,7 @@ const ROLES_GESTIONABLES = [
   { value: 'viewer', label: 'Observador' },
 ]
 
-const API_BASE = `${import.meta.env.VITE_API_URL ?? ''}/api/v1/user-management`
+const API_BASE = `/api/v1/user-management`
 
 function formatDate(iso: string | null): string {
   if (!iso) return 'Nunca'
