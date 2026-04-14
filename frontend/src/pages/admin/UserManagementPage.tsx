@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { useAuthStore } from '@/store/authStore'
+import api from '@/services/api'
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 interface UserRow {
@@ -23,7 +23,7 @@ const ROLES_GESTIONABLES = [
   { value: 'viewer', label: 'Observador' },
 ]
 
-const API_BASE = `/api/v1/user-management`
+const BASE = '/user-management'
 
 function formatDate(iso: string | null): string {
   if (!iso) return 'Nunca'
@@ -296,8 +296,6 @@ function UserFormModal({ mode, initial, onClose, onSave, saving, error }: UserFo
 
 // ── Página principal ──────────────────────────────────────────────────────────
 export default function UserManagementPage() {
-  const token = useAuthStore((s) => s.token)
-
   const [users, setUsers] = useState<UserRow[]>([])
   const [loading, setLoading] = useState(true)
   const [showInactive, setShowInactive] = useState(false)
@@ -308,25 +306,23 @@ export default function UserManagementPage() {
   const [tempPassword, setTempPassword] = useState<string | null>(null)
   const [actionError, setActionError] = useState('')
 
-  const authHeaders = { Authorization: `Bearer ${token}` }
-
   // ── Fetch ──────────────────────────────────────────────────────────────────
   const fetchUsers = useCallback(async () => {
     setLoading(true)
     setActionError('')
     try {
-      const res = await fetch(`${API_BASE}/usuarios?include_inactive=${showInactive}`, {
-        headers: authHeaders,
+      const { data: json } = await api.get(`${BASE}/usuarios`, {
+        params: { include_inactive: showInactive },
       })
-      if (!res.ok) throw new Error(`Error ${res.status}`)
-      const json = await res.json()
       setUsers(json.data)
     } catch (err: unknown) {
-      setActionError(err instanceof Error ? err.message : 'Error al cargar usuarios')
+      const msg = (err as { response?: { data?: { error?: { message?: string } } } })
+        ?.response?.data?.error?.message
+      setActionError(msg ?? 'Error al cargar usuarios')
     } finally {
       setLoading(false)
     }
-  }, [showInactive, token]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [showInactive])
 
   useEffect(() => { fetchUsers() }, [fetchUsers])
 
@@ -335,21 +331,14 @@ export default function UserManagementPage() {
     setSaving(true)
     setFormError('')
     try {
-      const res = await fetch(`${API_BASE}/usuarios`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders },
-        body: JSON.stringify(data),
-      })
-      const json = await res.json()
-      if (!res.ok) {
-        setFormError(json.error?.message ?? `Error ${res.status}`)
-        return
-      }
+      const { data: json } = await api.post(`${BASE}/usuarios`, data)
       setFormMode(null)
       setTempPassword(json.data.temporary_password)
       fetchUsers()
     } catch (err: unknown) {
-      setFormError(err instanceof Error ? err.message : 'Error inesperado')
+      const msg = (err as { response?: { data?: { error?: { message?: string } } } })
+        ?.response?.data?.error?.message
+      setFormError(msg ?? 'Error inesperado')
     } finally {
       setSaving(false)
     }
@@ -361,21 +350,17 @@ export default function UserManagementPage() {
     setSaving(true)
     setFormError('')
     try {
-      const res = await fetch(`${API_BASE}/usuarios/${editingUser.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...authHeaders },
-        body: JSON.stringify({ full_name: data.full_name, role: data.role }),
+      await api.put(`${BASE}/usuarios/${editingUser.id}`, {
+        full_name: data.full_name,
+        role: data.role,
       })
-      const json = await res.json()
-      if (!res.ok) {
-        setFormError(json.error?.message ?? `Error ${res.status}`)
-        return
-      }
       setFormMode(null)
       setEditingUser(undefined)
       fetchUsers()
     } catch (err: unknown) {
-      setFormError(err instanceof Error ? err.message : 'Error inesperado')
+      const msg = (err as { response?: { data?: { error?: { message?: string } } } })
+        ?.response?.data?.error?.message
+      setFormError(msg ?? 'Error inesperado')
     } finally {
       setSaving(false)
     }
@@ -385,15 +370,12 @@ export default function UserManagementPage() {
   const handleResetPassword = async (userId: string) => {
     if (!window.confirm('¿Confirma resetear la contraseña de este usuario?')) return
     try {
-      const res = await fetch(`${API_BASE}/usuarios/${userId}/resetear-contrasena`, {
-        method: 'POST',
-        headers: authHeaders,
-      })
-      const json = await res.json()
-      if (!res.ok) { setActionError(json.error?.message ?? 'Error'); return }
+      const { data: json } = await api.post(`${BASE}/usuarios/${userId}/resetear-contrasena`)
       setTempPassword(json.data.temporary_password)
     } catch (err: unknown) {
-      setActionError(err instanceof Error ? err.message : 'Error inesperado')
+      const msg = (err as { response?: { data?: { error?: { message?: string } } } })
+        ?.response?.data?.error?.message
+      setActionError(msg ?? 'Error inesperado')
     }
   }
 
@@ -402,15 +384,12 @@ export default function UserManagementPage() {
     const action = user.is_active ? 'desactivar' : 'activar'
     if (!window.confirm(`¿Confirma ${action} a ${user.full_name}?`)) return
     try {
-      const res = await fetch(`${API_BASE}/usuarios/${user.id}/${action}`, {
-        method: 'POST',
-        headers: authHeaders,
-      })
-      const json = await res.json()
-      if (!res.ok) { setActionError(json.error?.message ?? 'Error'); return }
+      await api.post(`${BASE}/usuarios/${user.id}/${action}`)
       fetchUsers()
     } catch (err: unknown) {
-      setActionError(err instanceof Error ? err.message : 'Error inesperado')
+      const msg = (err as { response?: { data?: { error?: { message?: string } } } })
+        ?.response?.data?.error?.message
+      setActionError(msg ?? 'Error inesperado')
     }
   }
 
